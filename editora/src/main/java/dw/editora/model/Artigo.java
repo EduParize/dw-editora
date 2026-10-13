@@ -7,6 +7,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 // @Entity avisa ao JPA/Hibernate que esta classe é uma entidade de banco de dados (o 'M' do MVC)
 @Entity
@@ -29,16 +31,21 @@ public class Artigo {
     // Define um valor padrão na estrutura do banco de dados (true por padrão)
     @Column(columnDefinition = "BOOLEAN DEFAULT TRUE") 
     private boolean publicado;
+
+    @ManyToOne
+    @JoinColumn(name = "autor_id", nullable = false)
+    private Autor autor; 
       
     // Construtor vazio exigido pelo framework JPA
     public Artigo() {
 	}
 
     // Construtor utilitário para facilitar a criação de objetos no Controller
-	public Artigo(String titulo, String resumo, boolean publicado) {
+	public Artigo(String titulo, String resumo, boolean publicado, Autor autor) {
 		this.titulo = titulo;
 		this.resumo = resumo;
 		this.publicado = publicado;
+        this.autor = autor;
 	}
 
     // Getters e Setters (Encapsulamento - princípio básico de Orientação a Objetos)
@@ -50,9 +57,12 @@ public class Artigo {
     public void setResumo(String resumo) { this.resumo = resumo; }
     public boolean isPublicado() { return this.publicado; }
     public void setPublicado(boolean publicado) { this.publicado = publicado; }
+    public Autor getAutor() { return this.autor; }
+    public void setAutor(Autor autor) { this.autor = autor; }
 
     @Override
     public String toString() {
-		return "Artigo [id=" + id + ", titulo=" + titulo + ", resumo=" + resumo + ", publicado=" + publicado + "]";
+		return "Artigo [id=" + id + ", titulo=" + titulo + ", resumo=" + resumo +
+         ", publicado=" + publicado + ", autor=" + autor + "]";
 	}
 }
