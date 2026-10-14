@@ -2,10 +2,8 @@
 
 package dw.editora.control;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,140 +14,113 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dw.editora.model.Artigo;
-import dw.editora.repository.ArtigoRepository;
-import dw.editora.model.Autor;
-import dw.editora.repository.AutorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import dw.editora.service.ArtigoService;
 
 // Permite que o front-end (mesmo em domínios diferentes) consuma esta API.
 @CrossOrigin(origins = "*") 
 // @RestController diz ao Spring: "Você gerencia esta classe e ela responde a requisições web".
 // Isso é um exemplo clássico de Inversão de Controle (IoC): o framework controla o ciclo de vida do Controller.
 @RestController 
+@RequestMapping("/api/artigos")
 public class ArtigoController {
 
-    // Dependência da camada de dados (Repository)
+    // Dependência da camada de regras de negócio (Service)
     // Está marcada como 'final' para garantir que não será alterada após a injeção.
-    private final ArtigoRepository rep;
-    private final AutorRepository autorRep;
+    private final ArtigoService artigoService;
 
     /* 
      * INJEÇÃO DE DEPENDÊNCIA (DI):
-     * Em vez da classe criar uma instância do repositório (ex: rep = new ArtigoRepositoryImpl()), 
-     * o framework Spring "injeta" a dependência através do construtor. Isso diminui o acoplamento
-     * e facilita a criação de testes (podemos injetar um "mock" no lugar do repositório real).
+     * Em vez da classe criar uma instância do service, o framework Spring "injeta" a dependência
+     * através do construtor. Isso diminui o acoplamento e facilita a criação de testes.
      */
-    public ArtigoController( ArtigoRepository rep, AutorRepository autorRep) {
-        this.rep = rep;
-        this.autorRep = autorRep;
+    public ArtigoController(ArtigoService artigoService) {
+        this.artigoService = artigoService;
     }
 
     /*
-     * GET / : listar todos os artigos
+     * GET /api/artigos : listar todos os artigos (filtro opcional por título)
      */
-    @GetMapping("/")
-    public ResponseEntity<List<Artigo>> getAllArtigos(@RequestParam(required = false) String titulo){
+    @GetMapping
+    public ResponseEntity<List<Artigo>> getAllArtigos(@RequestParam(required = false) String titulo) {
         try {
-            List<Artigo> la = new ArrayList<Artigo>();
-            
-            // Regra de negócio simples para filtrar pelo título se ele for passado na URL
-            if (titulo == null)
-                rep.findAll().forEach(la::add);
-            else
-                rep.findByTituloContainingIgnoreCase(titulo).forEach(la::add);
-
-            if (la.isEmpty())
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // Retorna 204 se estiver vazio
-            return new ResponseEntity<>(la, HttpStatus.OK); // Retorna 200 e a lista
+            List<Artigo> artigos = artigoService.listar(titulo);
+            if (artigos.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(artigos, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /*
-     * GET /:id : obter um artigo dado um id
+     * GET /api/artigos/{id} : obter um artigo dado um id
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Artigo> getArtigo(@PathVariable("id") long id)
-    {
+    public ResponseEntity<Artigo> getArtigo(@PathVariable("id") long id) {
         // O Optional ajuda a evitar NullPointerException
-        Optional<Artigo> data = rep.findById(id);
-
-        if (data.isPresent())
-        {
-            Artigo a = data.get();
-            return new ResponseEntity<>(a, HttpStatus.OK);
+        Optional<Artigo> data = artigoService.buscarPorId(id);
+        if (data.isPresent()) {
+            return new ResponseEntity<>(data.get(), HttpStatus.OK);
         }
-        else
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 se não achar o id
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     /*
-     * POST / : criar um artigo
+     * POST /api/artigos : criar um artigo (o JSON deve conter "autor": { "id": ... })
      */
-    @PostMapping("/")
-    public ResponseEntity<Artigo> createArtigo(@RequestBody Artigo ar) {
+    @PostMapping
+    public ResponseEntity<Artigo> createArtigo(@RequestBody Artigo dados) {
         try {
-            if (ar.getAutor() == null) {
+            Optional<Artigo> salvo = artigoService.criar(dados);
+            if (salvo.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
-
-            Optional<Autor> data = autorRep.findById(ar.getAutor().getId());
-
-            if (data.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
-
-            Autor autor = data.get();
-
-            Artigo artigo = new Artigo(
-                ar.getTitulo(),
-                ar.getResumo(),
-                ar.isPublicado(),
-                autor
-            );
-
-            Artigo salvo = rep.save(artigo);
-
-            return new ResponseEntity<>(salvo, HttpStatus.CREATED);
-
+            return new ResponseEntity<>(salvo.get(), HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /*
-     * PUT /:id : atualizar artigo dado um id
+     * PUT /api/artigos/{id} : atualizar artigo dado um id
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Artigo> updateArtigo(@PathVariable("id") long id, @RequestBody Artigo a)
-    {
-        Optional<Artigo> data = rep.findById(id);
-
-        if (data.isPresent())
-        {
-            Artigo ar = data.get();
-            ar.setPublicado(a.isPublicado());
-            ar.setResumo(a.getResumo());
-            ar.setTitulo(a.getTitulo());
-
-            return new ResponseEntity<>(rep.save(ar), HttpStatus.OK);
+    public ResponseEntity<Artigo> updateArtigo(@PathVariable("id") long id, @RequestBody Artigo dados) {
+        Optional<Artigo> atualizado = artigoService.atualizar(id, dados);
+        if (atualizado.isPresent()) {
+            return new ResponseEntity<>(atualizado.get(), HttpStatus.OK);
         }
-        else
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     /*
-     * DEL /:id : remover artigo dado um id
+     * DELETE /api/artigos/{id} : remover artigo dado um id
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<HttpStatus> deleteArtigo(@PathVariable("id") long id){
+    public ResponseEntity<HttpStatus> deleteArtigo(@PathVariable("id") long id) {
         try {
-            rep.deleteById(id);
+            if (artigoService.deletar(id)) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /*
+     * DELETE /api/artigos : remover todos os artigos
+     */
+    @DeleteMapping
+    public ResponseEntity<HttpStatus> deleteAllArtigo() {
+        try {
+            artigoService.deletarTodos();
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -157,31 +128,16 @@ public class ArtigoController {
     }
 
     /*
-     * DEL / : remover todos os artigos
-     */
-    @DeleteMapping("/")
-    public ResponseEntity<HttpStatus> deleteAllArtigo()
-    {
-        try {
-            rep.deleteAll();
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }        
-    }
-
-    /*
-     * GET /publicado : buscar por artigos publicados 
+     * GET /api/artigos/publicado : buscar por artigos publicados 
      */
     @GetMapping("/publicado")
-    public ResponseEntity<List<Artigo>> getAllPublicado(){
+    public ResponseEntity<List<Artigo>> getAllPublicado() {
         try {
-            List<Artigo> la = new ArrayList<Artigo>();
-            rep.findByPublicado(true).forEach(la::add);
-
-            if (la.isEmpty())
+            List<Artigo> artigos = artigoService.listarPublicados();
+            if (artigos.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            return new ResponseEntity<>(la, HttpStatus.OK);
+            }
+            return new ResponseEntity<>(artigos, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }

@@ -1,4 +1,3 @@
-// Camada Model do padrão MVC.
 package dw.editora.model;
 
 import jakarta.persistence.Column;
@@ -10,7 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 
-// @Entity avisa ao JPA/Hibernate que esta classe é uma entidade de banco de dados (o 'M' do MVC)
+// @Entity avisa ao JPA/Hibernate que esta classe é uma entidade de banco de dados
 @Entity
 @Table(name = "artigo") // Mapeia explicitamente para a tabela chamada "artigo"
 public class Artigo {
@@ -40,7 +39,7 @@ public class Artigo {
     public Artigo() {
 	}
 
-    // Construtor utilitário para facilitar a criação de objetos no Controller
+    // Construtor utilitário para facilitar a criação de objetos no Service
 	public Artigo(String titulo, String resumo, boolean publicado, Autor autor) {
 		this.titulo = titulo;
 		this.resumo = resumo;
