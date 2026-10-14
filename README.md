@@ -20,3 +20,8 @@ Este repositório armazena todos os códigos-fonte, projetos e atividades práti
 ## 📜 Licença
 
 Este projeto é distribuído sob a licença MIT. Isso significa que você pode usar, copiar, modificar e distribuir o código livremente, desde que os devidos créditos sejam mantidos.
+
+## Alunos:
+* Eduardo Parize
+* Lucas Del Pozo
+
