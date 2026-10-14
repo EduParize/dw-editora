@@ -8,6 +8,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Lob;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
 @Entity
@@ -28,6 +32,10 @@ public class Autor{
     @Lob
     private String biografia;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "autor")
+    private List<Artigo> artigos = new ArrayList<>();
+
     public Autor(){
     }
 
@@ -46,7 +54,13 @@ public class Autor{
     public String getEmail() { return this.email; }
     public void setEmail(String email) { this.email = email; }
     public String getBiografia() { return this.biografia; }
-    public void setBiografia(String biografia) { this.biografia = biografia; } 
+    public void setBiografia(String biografia) { this.biografia = biografia; }
+    public List<Artigo> getArtigos() { return artigos; } 
+
+    public void adicionarArtigo(Artigo artigo) {
+    artigos.add(artigo);
+    artigo.setAutor(this);
+    }
 
     @Override
     public String toString(){

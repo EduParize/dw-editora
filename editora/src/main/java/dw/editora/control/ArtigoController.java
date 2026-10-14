@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dw.editora.model.Artigo;
 import dw.editora.repository.ArtigoRepository;
+import dw.editora.model.Autor;
+import dw.editora.repository.AutorRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 
 // Permite que o front-end (mesmo em domínios diferentes) consuma esta API.
 @CrossOrigin(origins = "*") 
@@ -31,6 +35,7 @@ public class ArtigoController {
     // Dependência da camada de dados (Repository)
     // Está marcada como 'final' para garantir que não será alterada após a injeção.
     private final ArtigoRepository rep;
+    private final AutorRepository autorRep;
 
     /* 
      * INJEÇÃO DE DEPENDÊNCIA (DI):
@@ -38,8 +43,9 @@ public class ArtigoController {
      * o framework Spring "injeta" a dependência através do construtor. Isso diminui o acoplamento
      * e facilita a criação de testes (podemos injetar um "mock" no lugar do repositório real).
      */
-    public ArtigoController(ArtigoRepository rep) {
+    public ArtigoController( ArtigoRepository rep, AutorRepository autorRep) {
         this.rep = rep;
+        this.autorRep = autorRep;
     }
 
     /*
@@ -88,9 +94,29 @@ public class ArtigoController {
     @PostMapping("/")
     public ResponseEntity<Artigo> createArtigo(@RequestBody Artigo ar) {
         try {
-            // O objeto "ar" chega preenchido pelo Spring graças à conversão do JSON recebido no corpo da requisição
-            Artigo a = rep.save(new Artigo(ar.getTitulo(), ar.getResumo(), ar.isPublicado()));
-            return new ResponseEntity<>(a, HttpStatus.CREATED); // 201 Created
+            if (ar.getAutor() == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+
+            Optional<Autor> data = autorRep.findById(ar.getAutor().getId());
+
+            if (data.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+
+            Autor autor = data.get();
+
+            Artigo artigo = new Artigo(
+                ar.getTitulo(),
+                ar.getResumo(),
+                ar.isPublicado(),
+                autor
+            );
+
+            Artigo salvo = rep.save(artigo);
+
+            return new ResponseEntity<>(salvo, HttpStatus.CREATED);
+
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
