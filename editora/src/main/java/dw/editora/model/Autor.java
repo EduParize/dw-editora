@@ -1,4 +1,3 @@
-// Camada Model do padrão MVC.
 package dw.editora.model;
 
 import jakarta.persistence.Column;
@@ -7,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +27,7 @@ public class Autor{
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Lob
+    @Column(length = 2000)
     private String biografia;
 
     @JsonIgnore
